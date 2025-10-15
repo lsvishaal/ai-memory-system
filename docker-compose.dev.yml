@@ -1,0 +1,66 @@
+# Development Docker Compose Configuration
+# Use: docker compose -f docker-compose.dev.yml up --watch
+
+services:
+  # Memory API - FastAPI application with hot reload
+  memory-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - ai-memory-system/api:latest
+    container_name: memory-api-dev
+    image: ai-memory-system/api:dev
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=debug
+      - QDRANT_URL=http://vector-db:6333
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount source for hot reload (exclude .venv)
+      - ./src:/app/src:ro
+      - ./data:/app/data:ro
+    depends_on:
+      - vector-db
+    networks:
+      - memory-net
+    restart: unless-stopped
+    command: ["uvicorn", "src.ai_memory_system.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    
+    # Docker Compose Watch for development
+    develop:
+      watch:
+        # Sync source code changes
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - "**/__pycache__"
+            - "**/*.pyc"
+        
+        # Rebuild on dependency changes
+        - action: rebuild
+          path: ./pyproject.toml
+
+  # Vector Database - Qdrant service
+  vector-db:
+    image: qdrant/qdrant:latest
+    container_name: vector-db-dev
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - vector_storage_dev:/qdrant/storage
+    networks:
+      - memory-net
+    restart: unless-stopped
+
+volumes:
+  vector_storage_dev:
+    driver: local
+
+networks:
+  memory-net:
+    driver: bridge

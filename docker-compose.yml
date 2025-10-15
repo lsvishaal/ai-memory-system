@@ -1,0 +1,53 @@
+﻿services:
+  # Memory API - FastAPI application with UV
+  memory-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: memory-api
+    image: ai-memory-system/api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - QDRANT_URL=http://vector-db:6333
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount data directory for seed embeddings (read-only)
+      - ./data:/app/data:ro
+    depends_on:
+      - vector-db
+    networks:
+      - memory-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Vector Database - Qdrant service
+  vector-db:
+    image: qdrant/qdrant:latest
+    container_name: vector-db
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      # Persistent storage for vector data
+      - vector_storage:/qdrant/storage
+    networks:
+      - memory-net
+    restart: unless-stopped
+
+# Named volumes for data persistence
+volumes:
+  vector_storage:
+    driver: local
+
+# Custom network for service isolation
+networks:
+  memory-net:
+    driver: bridge
