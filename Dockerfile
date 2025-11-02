@@ -3,7 +3,7 @@
 ################################################################################
 # Stage 1: Builder - Install dependencies with UV
 ################################################################################
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
 # Set UV environment variables for optimal build
 ENV UV_COMPILE_BYTECODE=1 \
@@ -23,19 +23,22 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy application source code
 COPY . /app
 
-# Install the project itself (keep editable for proper import paths)
+# Install the project itself
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
 ################################################################################
 # Stage 2: Runtime - Minimal production image
 ################################################################################
-FROM python:3.11-slim-bookworm AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
-# Combine apt-get, user creation, and cleanup in single layer
+# Install runtime dependencies and create user in single layer
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
-    groupadd -r app && useradd -r -g app -u 1000 app && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl && \
+    groupadd -r app && \
+    useradd -r -g app -u 1000 app && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -55,9 +58,9 @@ USER app
 # Expose FastAPI default port
 EXPOSE 8000
 
-# Health check for container orchestration
+# Health check using curl (faster than Python)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Use uvicorn directly for production deployment
 CMD ["uvicorn", "src.ai_memory_system.main:app", "--host", "0.0.0.0", "--port", "8000"]

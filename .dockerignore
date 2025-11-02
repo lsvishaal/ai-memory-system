@@ -1,3 +1,8 @@
+# Version control
+.git/
+.gitignore
+.github/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -44,22 +49,26 @@ dmypy.json
 .DS_Store
 Thumbs.db
 
-# Git
-.git/
-.gitignore
-
-# Documentation
+# Documentation (exclude from builds)
+docs/
 *.md
 !README.md
 
-# Data (mounted separately)
+# Data (mounted separately or generated at runtime)
 qdrant_data/
 qdrant_storage/
 data/*.json
 
 # Logs
 *.log
+logs/
 
 # Environment
 .env
 .env.local
+.env.*.local
+
+# Project analysis (not needed in container)
+PROJECT_ANALYSIS.md
+roadmap.md
+ROADMAP.md

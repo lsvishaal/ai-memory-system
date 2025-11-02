@@ -46,6 +46,7 @@ dmypy.json
 *.swo
 *~
 .DS_Store
+.github/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -80,5 +81,10 @@ Thumbs.db
 tmp/
 temp/
 
-#Notes
+# Notes & Personal Files
 roadmap.md
+ROADMAP.md
+notes.md
+NOTES.md
+personal/
+.personal/

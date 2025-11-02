@@ -3,14 +3,15 @@ name = "ai-memory-system"
 version = "0.1.0"
 description = "AI Memory Infrastructure with Qdrant Vector Database"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.119.0",
+    "httpx>=0.28.1",
     "numpy>=2.3.3",
+    "prometheus-fastapi-instrumentator>=7.0.0",
     "python-dotenv>=1.1.1",
     "qdrant-client>=1.15.1",
-    "sentence-transformers>=5.1.1",
-    "uvicorn>=0.37.0",
+    "uvicorn[standard]>=0.37.0",
 ]
 
 [dependency-groups]
@@ -19,4 +20,13 @@ dev = [
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
     "ruff>=0.14.0",
+]
+
+embedding = [
+    "sentence-transformers>=5.1.1",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (require running services)",
 ]

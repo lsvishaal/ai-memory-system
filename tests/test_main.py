@@ -18,6 +18,7 @@ def test_root_endpoint():
     data = response.json()
     assert data["message"] == "AI Memory System API"
     assert data["status"] == "healthy"
+    assert data["stage"] == "0-1"
     assert "timestamp" in data
 
 
@@ -27,12 +28,14 @@ def test_health_endpoint():
     assert response.status_code == 200
     
     data = response.json()
-    assert data["status"] == "healthy"
+    # Status can be "healthy" (Qdrant connected) or "degraded" (Qdrant disconnected)
+    assert data["status"] in ["healthy", "degraded"]
     assert data["service"] == "ai-memory-system"
     assert data["version"] == "0.1.0"
     assert "dependencies" in data
     assert "fastapi" in data["dependencies"]
     assert "qdrant-client" in data["dependencies"]
+    assert "qdrant" in data
     assert "timestamp" in data
 
 
