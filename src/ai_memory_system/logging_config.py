@@ -8,39 +8,68 @@ Follows best practices from .github/copilot-instructions-logging.md
 import logging
 import sys
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional, MutableMapping
 from pythonjsonlogger import jsonlogger
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
-    """Custom JSON formatter with additional context."""
+    """Custom JSON formatter with additional context and request ID tracking."""
 
     def add_fields(
         self,
-        log_record: Dict[str, Any],
+        log_data: Dict[str, Any],
         record: logging.LogRecord,
         message_dict: Dict[str, Any],
     ) -> None:
-        """Add custom fields to log record."""
-        super().add_fields(log_record, record, message_dict)
+        """Add custom fields to log record including request_id from context."""
+        super().add_fields(log_data, record, message_dict)
 
         # Add timestamp
-        log_record["timestamp"] = self.formatTime(record, self.datefmt)
+        log_data["timestamp"] = self.formatTime(record, self.datefmt)
 
         # Add log level
-        log_record["level"] = record.levelname
+        log_data["level"] = record.levelname
 
         # Add logger name
-        log_record["logger"] = record.name
+        log_data["logger"] = record.name
 
-        # Add file and line info for debugging
+        # Add request_id if available (from context var or extra)
+        if hasattr(record, "request_id"):
+            log_data["request_id"] = getattr(record, "request_id")
+        elif "request_id" in message_dict:
+            log_data["request_id"] = message_dict["request_id"]
+
+        # Add file and line info for debugging errors
         if record.levelno >= logging.ERROR:
-            log_record["file"] = record.pathname
-            log_record["line"] = record.lineno
-            log_record["function"] = record.funcName
+            log_data["file"] = record.pathname
+            log_data["line"] = record.lineno
+            log_data["function"] = record.funcName
 
 
-def setup_logging(log_level: str = None, json_format: bool = True) -> logging.Logger:
+class RequestIDAdapter(logging.LoggerAdapter):
+    """Logger adapter that automatically adds request_id from context var."""
+
+    def process(
+        self, msg: str, kwargs: MutableMapping[str, Any]
+    ) -> tuple[str, MutableMapping[str, Any]]:
+        """Add request_id to extra if available in context."""
+        # Import here to avoid circular dependency
+        try:
+            from ai_memory_system.main import request_id_var
+            
+            request_id = request_id_var.get("")
+            if request_id:
+                if "extra" not in kwargs:
+                    kwargs["extra"] = {}
+                kwargs["extra"]["request_id"] = request_id
+        except (ImportError, LookupError):
+            # request_id_var not available or not set
+            pass
+        
+        return msg, kwargs
+
+
+def setup_logging(log_level: Optional[str] = None, json_format: bool = True) -> logging.Logger:
     """
     Configure structured logging for the application.
 
@@ -87,8 +116,9 @@ def setup_logging(log_level: str = None, json_format: bool = True) -> logging.Lo
     return logger
 
 
-# Global logger instance
-logger = setup_logging()
+# Global logger instance wrapped with RequestIDAdapter for automatic request_id injection
+_base_logger = setup_logging()
+logger = RequestIDAdapter(_base_logger, {})
 
 
 def log_with_context(level: str, message: str, **context: Any) -> None:

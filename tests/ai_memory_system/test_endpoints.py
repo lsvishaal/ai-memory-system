@@ -135,7 +135,11 @@ class TestUpsertEndpoint:
         response = client.post("/upsert", json=payload)
 
         assert response.status_code == 500
-        assert "error" in response.json()["detail"].lower()
+        detail = response.json()["detail"]
+        # Detail is now a dict with structured error info
+        assert isinstance(detail, dict)
+        assert "error" in detail
+        assert detail["error"] == "Vector upsert failed"
 
 
 class TestQueryEndpoint:
@@ -213,10 +217,11 @@ class TestQueryEndpoint:
         response = client.post("/query", json=payload)
 
         assert response.status_code == 500
-        assert (
-            "search failed" in response.json()["detail"].lower()
-            or "query failed" in response.json()["detail"].lower()
-        )
+        detail = response.json()["detail"]
+        # Detail is now a dict with structured error info
+        assert isinstance(detail, dict)
+        assert "error" in detail
+        assert detail["error"] == "Vector search failed"
 
 
 class TestCollectionsEndpoint:

@@ -5,6 +5,7 @@ Tests for FastAPI REST endpoints to ensure correct HTTP responses,
 JSON structure validation, and proper content-type headers.
 """
 
+from unittest.mock import patch, Mock
 from fastapi.testclient import TestClient
 from src.ai_memory_system.main import app
 
@@ -26,19 +27,24 @@ def test_root_endpoint():
 
 def test_health_endpoint():
     """Verify health endpoint returns service status and dependencies."""
-    response = client.get("/health")
-    assert response.status_code == 200
+    # Mock Qdrant to ensure deterministic test results
+    with patch("src.ai_memory_system.main.qdrant_client") as mock_client:
+        mock_collections = Mock()
+        mock_collections.collections = []
+        mock_client.get_collections.return_value = mock_collections
 
-    data = response.json()
-    # Status can be "healthy" (Qdrant connected) or "degraded" (Qdrant disconnected)
-    assert data["status"] in ["healthy", "degraded"]
-    assert data["service"] == "ai-memory-system"
-    assert data["version"] == "0.1.0"
-    assert "dependencies" in data
-    assert "fastapi" in data["dependencies"]
-    assert "qdrant-client" in data["dependencies"]
-    assert "qdrant" in data
-    assert "timestamp" in data
+        response = client.get("/health")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["status"] == "healthy"  # Should be healthy with mocked Qdrant
+        assert data["service"] == "ai-memory-system"
+        assert data["version"] == "0.1.0"
+        assert "dependencies" in data
+        assert "fastapi" in data["dependencies"]
+        assert "qdrant-client" in data["dependencies"]
+        assert "qdrant" in data
+        assert "timestamp" in data
 
 
 def test_root_returns_json():
@@ -49,5 +55,11 @@ def test_root_returns_json():
 
 def test_health_returns_json():
     """Verify health endpoint uses JSON content type."""
-    response = client.get("/health")
-    assert response.headers["content-type"] == "application/json"
+    # Mock Qdrant for deterministic results
+    with patch("src.ai_memory_system.main.qdrant_client") as mock_client:
+        mock_collections = Mock()
+        mock_collections.collections = []
+        mock_client.get_collections.return_value = mock_collections
+
+        response = client.get("/health")
+        assert response.headers["content-type"] == "application/json"
