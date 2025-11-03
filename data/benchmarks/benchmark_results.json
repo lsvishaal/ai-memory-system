@@ -1,0 +1,44 @@
+[
+  {
+    "scale": 1000,
+    "upsert": {
+      "total_vectors": 1000,
+      "elapsed_seconds": 0.67,
+      "throughput_vectors_per_sec": 1502.84
+    },
+    "query": {
+      "iterations": 100,
+      "p50_ms": 5.52,
+      "p95_ms": 9.96,
+      "p99_ms": 10.81,
+      "mean_ms": 6.13,
+      "min_ms": 4.66,
+      "max_ms": 10.81
+    },
+    "collection": {
+      "name": "ai_memory",
+      "vectors_count": 100003
+    }
+  },
+  {
+    "scale": 10000,
+    "upsert": {
+      "total_vectors": 10000,
+      "elapsed_seconds": 7.39,
+      "throughput_vectors_per_sec": 1353.79
+    },
+    "query": {
+      "iterations": 100,
+      "p50_ms": 3.95,
+      "p95_ms": 4.61,
+      "p99_ms": 6.17,
+      "mean_ms": 4.07,
+      "min_ms": 3.53,
+      "max_ms": 6.17
+    },
+    "collection": {
+      "name": "ai_memory",
+      "vectors_count": 100003
+    }
+  }
+]

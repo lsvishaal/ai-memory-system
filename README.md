@@ -9,7 +9,7 @@ Production-grade vector database infrastructure for AI applications with semanti
 [![Coverage](https://img.shields.io/badge/Coverage-74%25-yellow.svg)](htmlcov/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Stage 1 Complete** ✅ — Vector operations, benchmarks, and comprehensive testing
+**Stage 2 Complete** ✅ — Production observability with Prometheus, Grafana, structured logging, and load testing
 
 ## Features
 
@@ -20,6 +20,8 @@ Production-grade vector database infrastructure for AI applications with semanti
 - 🐳 **Docker Ready** - Optimized multi-stage builds (<350MB)
 - ✅ **Type Safe** - Full type hints with mypy validation
 - 🧪 **Tested** - 20 tests, 74% coverage with edge cases
+- 📈 **Observable** - Prometheus metrics, Grafana dashboards, structured JSON logging
+- ⚡ **Load Tested** - k6 performance testing with defined thresholds
 
 ## Quick Start
 
@@ -28,15 +30,20 @@ Production-grade vector database infrastructure for AI applications with semanti
 git clone https://github.com/lsvishaal/ai-memory-system
 cd ai-memory-system
 
-# Start services (FastAPI + Qdrant)
+# Start services (FastAPI + Qdrant + Prometheus + Grafana)
 docker compose up -d
 
 # API available at http://localhost:8000
 # Interactive docs at http://localhost:8000/docs
 # Metrics at http://localhost:8000/metrics
+# Prometheus at http://localhost:9090
+# Grafana at http://localhost:3000 (admin/admin)
 
 # Run benchmarks
 uv run python scripts/benchmark.py
+
+# Generate test traffic for metrics
+bash /tmp/generate_traffic.sh
 ```
 
 ### Performance Benchmarks
@@ -234,6 +241,140 @@ just docker-down
 
 - **FastAPI** - Port 8000 (REST API)
 - **Qdrant** - Ports 6333 (HTTP), 6334 (gRPC)
+- **Prometheus** - Port 9090 (Metrics collection)
+- **Grafana** - Port 3000 (Visualization dashboards)
+
+## Observability Stack
+
+### Structured JSON Logging
+
+All application logs are in structured JSON format for production-grade observability:
+
+```bash
+# View application logs
+docker logs -f memory-api
+
+# Filter by log level
+docker logs memory-api 2>&1 | grep '"level":"ERROR"'
+
+# Extract specific fields
+docker logs memory-api 2>&1 | jq -r '.message'
+```
+
+**Example log output:**
+```json
+{
+  "timestamp": "2025-11-03T12:16:09+0000",
+  "level": "INFO",
+  "logger": "ai_memory_system",
+  "message": "Upsert completed successfully",
+  "vector_count": 100,
+  "elapsed_ms": 67.2,
+  "throughput_vec_per_sec": 1489.0
+}
+```
+
+### Prometheus Metrics
+
+**Access**: http://localhost:9090
+
+**Key Metrics:**
+- `http_requests_total` - Total HTTP requests by endpoint and status
+- `http_request_duration_seconds` - Request latency histograms (P50/P95/P99)
+- `http_request_size_bytes` - Request payload sizes
+- `http_response_size_bytes` - Response payload sizes
+
+**Useful Queries:**
+```promql
+# P95 latency in milliseconds
+histogram_quantile(0.95, 
+  sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+) * 1000
+
+# Request rate by endpoint
+sum(rate(http_requests_total[5m])) by (handler)
+
+# Error rate percentage
+sum(rate(http_requests_total{status=~"5.."}[5m])) 
+/ 
+sum(rate(http_requests_total[5m])) * 100
+```
+
+### Grafana Dashboards
+
+**Access**: http://localhost:3000 (Username: `admin`, Password: `admin`)
+
+**Pre-configured Dashboard**: "AI Memory System"
+
+**Panels:**
+1. **Request Rate Gauge** - Current requests per second
+2. **Response Time Latency** - P50/P95/P99 latency trends over time
+3. **HTTP Status Codes** - Success (2xx) vs errors (4xx/5xx) stacked area chart
+4. **Requests by Endpoint** - Traffic distribution across /upsert, /query, /health
+
+**Dashboard Features:**
+- Auto-refresh every 5 seconds
+- 15-minute time window
+- Pre-configured Prometheus datasource
+- Production-ready visualizations
+
+### Alerting Rules
+
+**Active Alerts** (configured in `prometheus/alerts.yml`):
+
+| Alert | Condition | Severity | Description |
+|-------|-----------|----------|-------------|
+| `HighErrorRate` | Error rate > 1% for 2min | Critical | HTTP 5xx errors exceed threshold |
+| `HighLatency` | P95 > 200ms for 5min | Warning | API response time degraded |
+| `ServiceDown` | API down for 1min | Critical | Main API service unavailable |
+| `QdrantDown` | Qdrant down for 1min | Critical | Vector database unavailable |
+
+**View alerts**: http://localhost:9090/alerts
+
+### Load Testing with k6
+
+**Install k6:**
+```bash
+# macOS
+brew install k6
+
+# Ubuntu/Debian
+sudo apt-get install k6
+
+# Windows
+choco install k6
+```
+
+**Run load tests:**
+```bash
+# Basic load test (10 VUs ramping to 50 VUs)
+k6 run scripts/load_test.js
+
+# Custom parameters
+k6 run --vus 50 --duration 60s scripts/load_test.js
+
+# Stress test with stages
+k6 run --stage 10s:10,30s:50,20s:100,10s:0 scripts/load_test.js
+```
+
+**Load Test Thresholds:**
+- ✅ `http_req_duration{p(95)}<200ms` - 95% of requests under 200ms
+- ✅ `http_req_failed<1%` - Error rate under 1%
+- ✅ `upsert_success>99%` - Upsert success rate over 99%
+- ✅ `query_success>99%` - Query success rate over 99%
+
+**Generate test traffic for Grafana:**
+```bash
+# Quick traffic generation
+bash /tmp/generate_traffic.sh
+
+# Or create your own script
+for i in {1..100}; do 
+  curl -s http://localhost:8000/health > /dev/null
+done
+```
+
+For complete documentation, see [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md)
 
 ## Technology Stack
 

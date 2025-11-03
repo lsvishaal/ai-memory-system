@@ -10,6 +10,7 @@ dependencies = [
     "numpy>=2.3.3",
     "prometheus-fastapi-instrumentator>=7.0.0",
     "python-dotenv>=1.1.1",
+    "python-json-logger>=4.0.0",
     "qdrant-client>=1.15.1",
     "uvicorn[standard]>=0.37.0",
 ]

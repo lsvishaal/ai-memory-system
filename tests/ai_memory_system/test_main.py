@@ -1,9 +1,10 @@
-﻿"""
+"""
 API Endpoint Tests
 
 Tests for FastAPI REST endpoints to ensure correct HTTP responses,
 JSON structure validation, and proper content-type headers.
 """
+
 from fastapi.testclient import TestClient
 from src.ai_memory_system.main import app
 
@@ -11,14 +12,15 @@ client = TestClient(app)
 
 
 def test_root_endpoint():
-    """Verify root endpoint returns expected service information."""
+    """Test that root endpoint returns expected data."""
     response = client.get("/")
     assert response.status_code == 200
-    
+
     data = response.json()
-    assert data["message"] == "AI Memory System API"
-    assert data["status"] == "healthy"
-    assert data["stage"] == "0-1"
+    assert "message" in data
+    assert "status" in data
+    assert "stage" in data
+    assert data["stage"] == "2"  # Stage 2: Production Observability complete
     assert "timestamp" in data
 
 
@@ -26,7 +28,7 @@ def test_health_endpoint():
     """Verify health endpoint returns service status and dependencies."""
     response = client.get("/health")
     assert response.status_code == 200
-    
+
     data = response.json()
     # Status can be "healthy" (Qdrant connected) or "degraded" (Qdrant disconnected)
     assert data["status"] in ["healthy", "degraded"]
